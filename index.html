@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Briganti nomogram</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --accent: #7dd3fc;
+      --accent-2: #c084fc;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --danger: #fca5a5;
+      --success: #a7f3d0;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Space Grotesk", "Segoe UI", sans-serif;
+      background: radial-gradient(120% 120% at 10% 20%, rgba(124, 58, 237, 0.12), transparent),
+                  radial-gradient(140% 140% at 80% 0%, rgba(34, 211, 238, 0.12), transparent),
+                  linear-gradient(135deg, #0b1220, var(--bg));
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 16px;
+    }
+
+    .card {
+      width: min(980px, 100%);
+      background: color-mix(in srgb, var(--panel) 85%, #0b1220);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 20px;
+      padding: 28px;
+      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.35);
+      backdrop-filter: blur(4px);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(26px, 4vw, 36px);
+      letter-spacing: -0.02em;
+    }
+
+    p.lead {
+      margin: 0 0 20px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-top: 12px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .field {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 14px;
+      padding: 12px;
+    }
+
+    input[type="number"] {
+      width: 100%;
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      padding: 10px 12px;
+      color: var(--text);
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    input[type="number"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(125, 211, 252, 0.2);
+    }
+
+    .toggle-group {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .toggle {
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.08s ease, border-color 0.15s ease, background 0.15s ease;
+    }
+
+    .toggle[aria-pressed="true"] {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: #0b1220;
+      border-color: transparent;
+      box-shadow: 0 10px 30px rgba(124, 58, 237, 0.35);
+      transform: translateY(-1px);
+    }
+
+    .isup-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .isup-option {
+      flex: 1 1 80px;
+      text-align: center;
+    }
+
+    button#calculate {
+      margin-top: 18px;
+      width: 100%;
+      padding: 14px;
+      font-size: 16px;
+      font-weight: 700;
+      color: #0b1220;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      box-shadow: 0 12px 35px rgba(124, 58, 237, 0.35);
+      transition: transform 0.1s ease, box-shadow 0.15s ease;
+    }
+
+    button#calculate:hover { transform: translateY(-1px); }
+    button#calculate:active { transform: translateY(0); box-shadow: none; }
+
+    .result {
+      margin-top: 22px;
+      padding: 16px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .result .value {
+      font-size: clamp(26px, 4vw, 34px);
+      font-weight: 700;
+      color: var(--text);
+      margin: 0;
+    }
+
+    .result .status { margin: 6px 0 0; color: var(--muted); }
+
+    .error {
+      margin-top: 12px;
+      color: var(--danger);
+      font-weight: 600;
+    }
+
+    @media (max-width: 640px) {
+      .card { padding: 20px; }
+      .toggle-group { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <header>
+      <h1>Briganti nomogram</h1>
+      <p class="lead">
+        Mata in värdena nedan för att beräkna sannolikheten (procent) enligt Briganti 2019.
+      </p>
+    </header>
+
+    <section class="grid">
+      <div class="field">
+        <label for="psa">PSA (ng/mL)</label>
+        <input id="psa" type="number" min="0" step="0.1" placeholder="t.ex. 7.2">
+      </div>
+
+      <div class="field">
+        <label>Extraprostatiskt extension (EPE)</label>
+        <div class="toggle-group" data-field="epe">
+          <button class="toggle" type="button" aria-pressed="false" data-value="0">Nej</button>
+          <button class="toggle" type="button" aria-pressed="false" data-value="1">Ja</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Vesikelinvasion (SVI)</label>
+        <div class="toggle-group" data-field="svi">
+          <button class="toggle" type="button" aria-pressed="false" data-value="0">Nej</button>
+          <button class="toggle" type="button" aria-pressed="false" data-value="1">Ja</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="diameter">Maximal diameter på MR (mm)</label>
+        <input id="diameter" type="number" min="0" step="0.1" placeholder="t.ex. 12">
+      </div>
+
+      <div class="field">
+        <label for="cores">Procent positiva biopsier (%)</label>
+        <input id="cores" type="number" min="0" max="100" step="1" placeholder="t.ex. 35">
+      </div>
+
+      <div class="field">
+        <label>ISUP-grad</label>
+        <div class="isup-group" id="isup">
+          <button class="toggle isup-option" type="button" aria-pressed="false" data-value="1">ISUP 1</button>
+          <button class="toggle isup-option" type="button" aria-pressed="false" data-value="2">ISUP 2</button>
+          <button class="toggle isup-option" type="button" aria-pressed="false" data-value="3">ISUP 3</button>
+          <button class="toggle isup-option" type="button" aria-pressed="false" data-value="4">ISUP 4</button>
+          <button class="toggle isup-option" type="button" aria-pressed="false" data-value="5">ISUP 5</button>
+        </div>
+      </div>
+    </section>
+
+    <button id="calculate" type="button">Beräkna risk</button>
+    <div class="result" aria-live="polite">
+      <p class="value" id="result-value">-</p>
+      <p class="status" id="result-status">Ingen beräkning ännu.</p>
+    </div>
+    <div class="error" id="error"></div>
+  </main>
+
+  <script>
+    const toggles = document.querySelectorAll(".toggle-group");
+    const isupButtons = document.querySelectorAll("#isup .toggle");
+    const resultEl = document.getElementById("result-value");
+    const statusEl = document.getElementById("result-status");
+    const errorEl = document.getElementById("error");
+    const calculateBtn = document.getElementById("calculate");
+
+    const state = {
+      epe: null,
+      svi: null,
+      isup: null,
+    };
+
+    function setExclusiveActive(container, target) {
+      const buttons = container.querySelectorAll(".toggle");
+      buttons.forEach(btn => btn.setAttribute("aria-pressed", btn === target ? "true" : "false"));
+    }
+
+    toggles.forEach(group => {
+      group.addEventListener("click", event => {
+        const btn = event.target.closest(".toggle");
+        if (!btn) return;
+        setExclusiveActive(group, btn);
+        const field = group.dataset.field;
+        state[field] = Number(btn.dataset.value);
+      });
+    });
+
+    isupButtons.forEach(btn => {
+      btn.addEventListener("click", event => {
+        setExclusiveActive(document.getElementById("isup"), event.currentTarget);
+        state.isup = Number(event.currentTarget.dataset.value);
+      });
+    });
+
+    function logistic(value) {
+      // Numerically stable logistic function
+      if (value >= 0) {
+        const expNeg = Math.exp(-value);
+        return 1 / (1 + expNeg);
+      }
+      const expVal = Math.exp(value);
+      return expVal / (1 + expVal);
+    }
+
+    function validateNumber(id, label, options = {}) {
+      const { min = -Infinity, max = Infinity } = options;
+      const raw = document.getElementById(id).value;
+      const numeric = Number(raw);
+      if (!raw || Number.isNaN(numeric)) {
+        throw new Error(`${label} saknas eller är ogiltigt.`);
+      }
+      if (numeric < min || numeric > max) {
+        throw new Error(`${label} måste ligga mellan ${min} och ${max}.`);
+      }
+      return numeric;
+    }
+
+    function calculate() {
+      errorEl.textContent = "";
+      try {
+        const psa = validateNumber("psa", "PSA", { min: 0 });
+        const diameter = validateNumber("diameter", "Maximal diameter", { min: 0 });
+        const cores = validateNumber("cores", "Procent positiva biopsier", { min: 0, max: 100 });
+
+        if (state.epe === null) throw new Error("Välj Ja/Nej för EPE.");
+        if (state.svi === null) throw new Error("Välj Ja/Nej för SVI.");
+        if (state.isup === null) throw new Error("Välj ISUP-grad.");
+
+        const isup3 = state.isup === 3 ? 1 : 0;
+        const isup4or5 = state.isup >= 4 ? 1 : 0;
+
+        const z =
+          -4.5974 +
+          0.0416 * psa +
+          1.2214 * state.epe +
+          1.4672 * state.svi +
+          0.0311 * diameter +
+          1.2032 * isup3 +
+          1.8063 * isup4or5 +
+          0.0119 * cores;
+
+        const probability = logistic(z) * 100;
+        const rounded = probability.toFixed(1);
+
+        resultEl.textContent = `${rounded} %`;
+        statusEl.textContent = "Sannolikhet för lymfkörtelmetastas enligt Briganti 2019.";
+      } catch (err) {
+        errorEl.textContent = err.message;
+        resultEl.textContent = "-";
+        statusEl.textContent = "Korrigera fälten ovan och försök igen.";
+      }
+    }
+
+    calculateBtn.addEventListener("click", calculate);
+  </script>
+</body>
+</html>
