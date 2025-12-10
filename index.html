@@ -166,6 +166,85 @@
 
     .result .status { margin: 6px 0 0; color: var(--muted); }
 
+    .chart-panel {
+      margin-top: 16px;
+      padding: 14px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .chart-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .chart-title {
+      margin: 0 0 4px;
+      font-weight: 700;
+      font-size: 15px;
+    }
+
+    .chart-note {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .chart-current {
+      font-weight: 700;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+
+    #cores-chart {
+      width: 100%;
+      height: 220px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      display: block;
+    }
+
+    #cores-chart path {
+      transition: d 0.2s ease;
+    }
+
+    .chart-axis {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .chart-axis span:nth-child(2) {
+      font-weight: 600;
+      color: var(--text);
+      font-size: 13px;
+    }
+
+    .chart-ticks {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 6px 12px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .chart-ticks span {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      padding: 6px 8px;
+      display: block;
+    }
+
     .error {
       margin-top: 12px;
       color: var(--danger);
@@ -236,6 +315,27 @@
       <p class="value" id="result-value">-</p>
       <p class="status" id="result-status">Ingen beräkning ännu.</p>
     </div>
+    <div class="chart-panel" aria-live="polite">
+      <div class="chart-header">
+        <div>
+          <p class="chart-title">Graf för positiva biopsier (0-100%)</p>
+          <p class="chart-note" id="chart-status">Grafen visas efter beräkning.</p>
+        </div>
+        <div class="chart-current" id="chart-info">-</div>
+      </div>
+      <svg id="cores-chart" viewBox="0 0 100 100" preserveAspectRatio="none" role="img" aria-label="Sannolikhet i procent för positiva biopsier mellan 0 och 100">
+        <path id="cores-chart-fill" d="" fill="rgba(125, 211, 252, 0.18)" stroke="none"></path>
+        <path id="cores-chart-line" d="" fill="none" stroke="var(--accent)" stroke-width="2"></path>
+        <line id="cores-chart-marker" x1="0" x2="0" y1="0" y2="100" stroke="var(--accent-2)" stroke-dasharray="4 4" opacity="0"></line>
+        <circle id="cores-chart-point" cx="0" cy="0" r="2.6" fill="var(--accent-2)" stroke="#0b1220" stroke-width="0.8" opacity="0"></circle>
+      </svg>
+      <div class="chart-axis">
+        <span>0%</span>
+        <span>Positiva biopsier</span>
+        <span>100%</span>
+      </div>
+      <div class="chart-ticks" id="chart-ticks" aria-live="polite"></div>
+    </div>
     <div class="error" id="error"></div>
   </main>
 
@@ -246,6 +346,15 @@
     const statusEl = document.getElementById("result-status");
     const errorEl = document.getElementById("error");
     const calculateBtn = document.getElementById("calculate");
+    const chartElements = {
+      line: document.getElementById("cores-chart-line"),
+      fill: document.getElementById("cores-chart-fill"),
+      marker: document.getElementById("cores-chart-marker"),
+      point: document.getElementById("cores-chart-point"),
+      info: document.getElementById("chart-info"),
+      status: document.getElementById("chart-status"),
+      ticks: document.getElementById("chart-ticks"),
+    };
 
     const state = {
       epe: null,
@@ -285,6 +394,23 @@
       return expVal / (1 + expVal);
     }
 
+    function computeProbability({ psa, epe, svi, diameter, cores, isup }) {
+      const isup3 = isup === 3 ? 1 : 0;
+      const isup4or5 = isup >= 4 ? 1 : 0;
+
+      const z =
+        -4.5974 +
+        0.0416 * psa +
+        1.2214 * epe +
+        1.4672 * svi +
+        0.0311 * diameter +
+        1.2032 * isup3 +
+        1.8063 * isup4or5 +
+        0.0119 * cores;
+
+      return logistic(z) * 100;
+    }
+
     function validateNumber(id, label, options = {}) {
       const { min = -Infinity, max = Infinity } = options;
       const raw = document.getElementById(id).value;
@@ -298,6 +424,59 @@
       return numeric;
     }
 
+    function resetChart(message = "Grafen visas efter beräkning.") {
+      chartElements.line.setAttribute("d", "");
+      chartElements.fill.setAttribute("d", "");
+      chartElements.marker.setAttribute("opacity", "0");
+      chartElements.point.setAttribute("opacity", "0");
+      chartElements.info.textContent = "-";
+      chartElements.status.textContent = message;
+      if (chartElements.ticks) {
+        chartElements.ticks.innerHTML = Array.from({ length: 11 }, (_, i) => `${i * 10}%: -`)
+          .map(text => `<span>${text}</span>`)
+          .join("");
+      }
+    }
+
+    function updateChart(inputs, probability) {
+      const curve = [];
+      for (let cores = 0; cores <= 100; cores += 1) {
+        curve.push(computeProbability({ ...inputs, cores }));
+      }
+
+      const clamp = value => Math.max(0, Math.min(100, value));
+      const y = value => 100 - clamp(value);
+
+      const path = curve
+        .map((value, idx) => `${idx === 0 ? "M" : "L"} ${idx} ${y(value)}`)
+        .join(" ");
+      const fillPath = path ? `${path} L 100 100 L 0 100 Z` : "";
+
+      chartElements.line.setAttribute("d", path);
+      chartElements.fill.setAttribute("d", fillPath);
+      chartElements.marker.setAttribute("x1", inputs.cores);
+      chartElements.marker.setAttribute("x2", inputs.cores);
+      chartElements.marker.setAttribute("y1", 0);
+      chartElements.marker.setAttribute("y2", 100);
+      chartElements.marker.setAttribute("opacity", "1");
+      chartElements.point.setAttribute("cx", inputs.cores);
+      chartElements.point.setAttribute("cy", y(probability));
+      chartElements.point.setAttribute("opacity", "1");
+
+      chartElements.info.textContent = `${probability.toFixed(1)} % vid ${inputs.cores}% positiva biopsier`;
+      chartElements.status.textContent =
+        "Kurvan använder samma värden för PSA, EPE, SVI, diameter och ISUP som ovan.";
+
+      if (chartElements.ticks) {
+        chartElements.ticks.innerHTML = Array.from({ length: 11 }, (_, i) => {
+          const c = i * 10;
+          const val = curve[c] ?? null;
+          const label = val === null || Number.isNaN(val) ? "-" : `${val.toFixed(1)} %`;
+          return `<span>${c}%: ${label}</span>`;
+        }).join("");
+      }
+    }
+
     function calculate() {
       errorEl.textContent = "";
       try {
@@ -309,32 +488,23 @@
         if (state.svi === null) throw new Error("Välj Ja/Nej för SVI.");
         if (state.isup === null) throw new Error("Välj ISUP-grad.");
 
-        const isup3 = state.isup === 3 ? 1 : 0;
-        const isup4or5 = state.isup >= 4 ? 1 : 0;
-
-        const z =
-          -4.5974 +
-          0.0416 * psa +
-          1.2214 * state.epe +
-          1.4672 * state.svi +
-          0.0311 * diameter +
-          1.2032 * isup3 +
-          1.8063 * isup4or5 +
-          0.0119 * cores;
-
-        const probability = logistic(z) * 100;
+        const inputs = { psa, diameter, cores, epe: state.epe, svi: state.svi, isup: state.isup };
+        const probability = computeProbability(inputs);
         const rounded = probability.toFixed(1);
 
         resultEl.textContent = `${rounded} %`;
         statusEl.textContent = "Sannolikhet för lymfkörtelmetastas enligt Briganti 2019.";
+        updateChart(inputs, probability);
       } catch (err) {
         errorEl.textContent = err.message;
         resultEl.textContent = "-";
         statusEl.textContent = "Korrigera fälten ovan och försök igen.";
+        resetChart("Grafen visas efter en giltig beräkning.");
       }
     }
 
     calculateBtn.addEventListener("click", calculate);
+    resetChart();
   </script>
 </body>
 </html>
