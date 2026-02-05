@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Briganti nomogram - Axel</title>
+  <meta name="theme-color" content="#0f172a">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --accent: #7dd3fc;
+      --accent-2: #c084fc;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --danger: #fca5a5;
+      --success: #a7f3d0;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Space Grotesk", "Segoe UI", sans-serif;
+      background: radial-gradient(120% 120% at 10% 20%, rgba(124, 58, 237, 0.12), transparent),
+                  radial-gradient(140% 140% at 80% 0%, rgba(34, 211, 238, 0.12), transparent),
+                  linear-gradient(135deg, #0b1220, var(--bg));
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 16px;
+    }
+
+    .card {
+      width: min(980px, 100%);
+      background: color-mix(in srgb, var(--panel) 85%, #0b1220);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 20px;
+      padding: 28px;
+      box-shadow: 0 20px 80px rgba(0, 0, 0, 0.35);
+      backdrop-filter: blur(4px);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(26px, 4vw, 36px);
+      letter-spacing: -0.02em;
+    }
+
+    p.lead {
+      margin: 0 0 20px;
+      color: var(--muted);
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-top: 12px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .field {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 14px;
+      padding: 12px;
+    }
+
+    input[type="number"] {
+      width: 100%;
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      padding: 10px 12px;
+      color: var(--text);
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    input[type="number"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(125, 211, 252, 0.2);
+    }
+
+    .toggle-group {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .toggle-group[data-field="extension"] {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .toggle {
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.08s ease, border-color 0.15s ease, background 0.15s ease;
+    }
+
+    .toggle[aria-pressed="true"] {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: #0b1220;
+      border-color: transparent;
+      box-shadow: 0 10px 30px rgba(124, 58, 237, 0.35);
+      transform: translateY(-1px);
+    }
+
+    .isup-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .isup-option {
+      flex: 1 1 80px;
+      text-align: center;
+    }
+
+    button#calculate {
+      margin-top: 18px;
+      width: 100%;
+      padding: 14px;
+      font-size: 16px;
+      font-weight: 700;
+      color: #0b1220;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      box-shadow: 0 12px 35px rgba(124, 58, 237, 0.35);
+      transition: transform 0.1s ease, box-shadow 0.15s ease;
+    }
+
+    button#calculate:hover { transform: translateY(-1px); }
+    button#calculate:active { transform: translateY(0); box-shadow: none; }
+
+    .result {
+      margin-top: 22px;
+      padding: 16px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .result .value {
+      font-size: clamp(26px, 4vw, 34px);
+      font-weight: 700;
+      color: var(--text);
+      margin: 0;
+    }
+
+    .result .status { margin: 6px 0 0; color: var(--muted); }
+
+    .chart-panel {
+      margin-top: 16px;
+      padding: 14px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .chart-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .chart-title {
+      margin: 0 0 4px;
+      font-weight: 700;
+      font-size: 15px;
+    }
+
+    .chart-note {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .chart-current {
+      font-weight: 700;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+
+    #cores-chart {
+      width: 100%;
+      height: 220px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      display: block;
+    }
+
+    #cores-chart path {
+      transition: d 0.2s ease;
+    }
+
+    #cores-chart .grid-line {
+      stroke: rgba(255, 255, 255, 0.08);
+      stroke-width: 0.6;
+    }
+
+    .chart-axis {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .chart-axis span:nth-child(2) {
+      font-weight: 600;
+      color: var(--text);
+      font-size: 13px;
+    }
+
+    .chart-ticks {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 6px 12px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .chart-ticks span {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      padding: 6px 8px;
+      display: block;
+    }
+
+    .error {
+      margin-top: 12px;
+      color: var(--danger);
+      font-weight: 600;
+    }
+
+    @media (max-width: 640px) {
+      .card { padding: 20px; }
+      .toggle-group { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <header>
+      <h1>Briganti nomogram</h1>
+      <p class="lead">
+        Mata in värdena nedan för att beräkna sannolikheten (procent) enligt Briganti 2019. Detta är ett test och ska användas med försiktighet!
+      </p>
+    </header>
+
+    <section class="grid">
+      <div class="field">
+        <label for="psa">PSA (ng/mL)</label>
+        <input id="psa" type="number" min="0" step="0.1" placeholder="t.ex. 7.2">
+      </div>
+
+      <div class="field">
+        <label>Extraprostatiskt extension eller vesikelinvasion</label>
+        <div class="toggle-group" data-field="extension">
+          <button class="toggle" type="button" aria-pressed="false" data-epe="0" data-svi="0">Ingen</button>
+          <button class="toggle" type="button" aria-pressed="false" data-epe="1" data-svi="0">EPE</button>
+          <button class="toggle" type="button" aria-pressed="false" data-epe="0" data-svi="1">Vesikelinvasion</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="diameter">Maximal diameter på MR (mm)</label>
+        <input id="diameter" type="number" min="0" step="0.1" placeholder="t.ex. 12">
+      </div>
+
+      <div class="field">
+        <label for="cores">Procent positiva systematiska biopsier (%)</label>
+        <input id="cores" type="number" min="0" max="100" step="1" placeholder="t.ex. 35">
+      </div>
+
+      <div class="field">
+        <label>ISUP-grad</label>
+        <div class="isup-group" id="isup">
+          <button class="toggle isup-option" type="button" aria-pressed="false" data-value="1">ISUP 1</button>
+          <button class="toggle isup-option" type="button" aria-pressed="false" data-value="2">ISUP 2</button>
+          <button class="toggle isup-option" type="button" aria-pressed="false" data-value="3">ISUP 3</button>
+          <button class="toggle isup-option" type="button" aria-pressed="false" data-value="4">ISUP 4</button>
+          <button class="toggle isup-option" type="button" aria-pressed="false" data-value="5">ISUP 5</button>
+        </div>
+      </div>
+    </section>
+
+    <button id="calculate" type="button">Beräkna risk</button>
+    <div class="result" aria-live="polite">
+      <p class="value" id="result-value">-</p>
+      <p class="status" id="result-status">Ingen beräkning ännu.</p>
+    </div>
+    <div class="chart-panel" aria-live="polite">
+      <div class="chart-header">
+        <div>
+          <p class="chart-title">Graf för positiva biopsier (0-100%)</p>
+          <p class="chart-note" id="chart-status">Grafen visas efter beräkning.</p>
+        </div>
+        <div class="chart-current" id="chart-info">-</div>
+      </div>
+      <svg id="cores-chart" viewBox="0 0 100 100" preserveAspectRatio="none" role="img" aria-label="Sannolikhet i procent för positiva biopsier mellan 0 och 100">
+        <g id="chart-grid"></g>
+        <path id="cores-chart-fill" d="" fill="rgba(125, 211, 252, 0.18)" stroke="none"></path>
+        <path id="cores-chart-line" d="" fill="none" stroke="var(--accent)" stroke-width="2"></path>
+        <line id="cores-chart-marker" x1="0" x2="0" y1="0" y2="100" stroke="var(--accent-2)" stroke-dasharray="4 4" opacity="0"></line>
+        <circle id="cores-chart-point" cx="0" cy="0" r="2.6" fill="var(--accent-2)" stroke="#0b1220" stroke-width="0.8" opacity="0"></circle>
+      </svg>
+      <div class="chart-axis">
+        <span>0%</span>
+        <span>Positiva biopsier</span>
+        <span>100%</span>
+      </div>
+      <div class="chart-ticks" id="chart-ticks" aria-live="polite"></div>
+    </div>
+    <div class="error" id="error"></div>
+  </main>
+
+  <script>
+    const toggles = document.querySelectorAll(".toggle-group");
+    const isupButtons = document.querySelectorAll("#isup .toggle");
+    const resultEl = document.getElementById("result-value");
+    const statusEl = document.getElementById("result-status");
+    const errorEl = document.getElementById("error");
+    const calculateBtn = document.getElementById("calculate");
+    const chartElements = {
+      line: document.getElementById("cores-chart-line"),
+      fill: document.getElementById("cores-chart-fill"),
+      marker: document.getElementById("cores-chart-marker"),
+      point: document.getElementById("cores-chart-point"),
+      info: document.getElementById("chart-info"),
+      status: document.getElementById("chart-status"),
+      ticks: document.getElementById("chart-ticks"),
+      grid: document.getElementById("chart-grid"),
+    };
+
+    const state = {
+      epe: null,
+      svi: null,
+      isup: null,
+    };
+
+    function drawGrid() {
+      if (!chartElements.grid) return;
+      const lines = [];
+      for (let i = 0; i <= 10; i += 1) {
+        const y = i * 10;
+        lines.push(`<line class="grid-line" x1="0" x2="100" y1="${y}" y2="${y}" />`);
+      }
+      chartElements.grid.innerHTML = lines.join("");
+    }
+
+    function setExclusiveActive(container, target) {
+      const buttons = container.querySelectorAll(".toggle");
+      buttons.forEach(btn => btn.setAttribute("aria-pressed", btn === target ? "true" : "false"));
+    }
+
+    toggles.forEach(group => {
+      group.addEventListener("click", event => {
+        const btn = event.target.closest(".toggle");
+        if (!btn) return;
+        setExclusiveActive(group, btn);
+        const { epe, svi, value } = btn.dataset;
+
+        // Kombinerad knapp: Sätter både EPE och SVI exklusivt
+        if (epe !== undefined || svi !== undefined) {
+          state.epe = epe !== undefined ? Number(epe) : state.epe;
+          state.svi = svi !== undefined ? Number(svi) : state.svi;
+        } else {
+          const field = group.dataset.field;
+          state[field] = Number(value);
+        }
+      });
+    });
+
+    isupButtons.forEach(btn => {
+      btn.addEventListener("click", event => {
+        setExclusiveActive(document.getElementById("isup"), event.currentTarget);
+        state.isup = Number(event.currentTarget.dataset.value);
+      });
+    });
+
+    function logistic(value) {
+      // Numerically stable logistic function
+      if (value >= 0) {
+        const expNeg = Math.exp(-value);
+        return 1 / (1 + expNeg);
+      }
+      const expVal = Math.exp(value);
+      return expVal / (1 + expVal);
+    }
+
+    function computeProbability({ psa, epe, svi, diameter, cores, isup }) {
+      const isup3 = isup === 3 ? 1 : 0;
+      const isup4or5 = isup >= 4 ? 1 : 0;
+
+      const z =
+        -4.5974 +
+        0.0416 * psa +
+        1.2214 * epe +
+        1.4672 * svi +
+        0.0311 * diameter +
+        1.2032 * isup3 +
+        1.8063 * isup4or5 +
+        0.0119 * cores;
+
+      return logistic(z) * 100;
+    }
+
+    function validateNumber(id, label, options = {}) {
+      const { min = -Infinity, max = Infinity } = options;
+      const raw = document.getElementById(id).value;
+      const numeric = Number(raw);
+      if (!raw || Number.isNaN(numeric)) {
+        throw new Error(`${label} saknas eller är ogiltigt.`);
+      }
+      if (numeric < min || numeric > max) {
+        throw new Error(`${label} måste ligga mellan ${min} och ${max}.`);
+      }
+      return numeric;
+    }
+
+    function resetChart(message = "Grafen visas efter beräkning.") {
+      chartElements.line.setAttribute("d", "");
+      chartElements.fill.setAttribute("d", "");
+      chartElements.marker.setAttribute("opacity", "0");
+      chartElements.point.setAttribute("opacity", "0");
+      chartElements.info.textContent = "-";
+      chartElements.status.textContent = message;
+      if (chartElements.ticks) {
+        chartElements.ticks.innerHTML = Array.from({ length: 11 }, (_, i) => `${i * 10}%: -`)
+          .map(text => `<span>${text}</span>`)
+          .join("");
+      }
+    }
+
+    function updateChart(baseInputs, selectedCores, probability) {
+      const curve = [];
+      for (let cores = 0; cores <= 100; cores += 1) {
+        curve.push(computeProbability({ ...baseInputs, cores }));
+      }
+
+      const clamp = value => Math.max(0, Math.min(100, value));
+      const y = value => 100 - clamp(value);
+
+      const path = curve
+        .map((value, idx) => `${idx === 0 ? "M" : "L"} ${idx} ${y(value)}`)
+        .join(" ");
+      const fillPath = path ? `${path} L 100 100 L 0 100 Z` : "";
+
+      chartElements.line.setAttribute("d", path);
+      chartElements.fill.setAttribute("d", fillPath);
+      if (selectedCores === null) {
+        chartElements.marker.setAttribute("opacity", "0");
+        chartElements.point.setAttribute("opacity", "0");
+        chartElements.info.textContent = "-";
+        chartElements.status.textContent =
+          "Inget värde för positiva biopsier angivet: kurvan visar sannolikhet för 0–100% i 10%-steg.";
+      } else {
+        chartElements.marker.setAttribute("x1", selectedCores);
+        chartElements.marker.setAttribute("x2", selectedCores);
+        chartElements.marker.setAttribute("y1", 0);
+        chartElements.marker.setAttribute("y2", 100);
+        chartElements.marker.setAttribute("opacity", "1");
+        chartElements.point.setAttribute("cx", selectedCores);
+        chartElements.point.setAttribute("cy", y(probability));
+        chartElements.point.setAttribute("opacity", "1");
+        chartElements.info.textContent = `${probability.toFixed(1)} % vid ${selectedCores}% positiva biopsier`;
+        chartElements.status.textContent =
+          "Kurvan använder samma värden för PSA, EPE/SVI, diameter och ISUP som ovan.";
+      }
+
+      if (chartElements.ticks) {
+        chartElements.ticks.innerHTML = Array.from({ length: 11 }, (_, i) => {
+          const c = i * 10;
+          const val = curve[c] ?? null;
+          const label = val === null || Number.isNaN(val) ? "-" : `${val.toFixed(1)} %`;
+          return `<span>${c}%: ${label}</span>`;
+        }).join("");
+      }
+    }
+
+    function calculate() {
+      errorEl.textContent = "";
+      try {
+        const psa = validateNumber("psa", "PSA", { min: 0 });
+        const diameter = validateNumber("diameter", "Maximal diameter", { min: 0 });
+        const coresRaw = document.getElementById("cores").value.trim();
+        let cores = null;
+        if (coresRaw !== "") {
+          cores = validateNumber("cores", "Procent positiva biopsier", { min: 0, max: 100 });
+        }
+
+        if (state.epe === null || state.svi === null) {
+          throw new Error("Välj EPE eller vesikelinvasion.");
+        }
+        if (state.isup === null) throw new Error("Välj ISUP-grad.");
+
+        const baseInputs = { psa, diameter, epe: state.epe, svi: state.svi, isup: state.isup };
+        const probability = cores === null ? null : computeProbability({ ...baseInputs, cores });
+
+        if (probability === null) {
+          resultEl.textContent = "-";
+          statusEl.textContent = "Ingen exakt siffra; kurvan visar sannolikhet för 0–100% biopsier.";
+        } else {
+          const rounded = probability.toFixed(1);
+          resultEl.textContent = `${rounded} %`;
+          statusEl.textContent = "Sannolikhet för lymfkörtelmetastas enligt Briganti 2019.";
+        }
+
+        updateChart(baseInputs, cores, probability ?? 0);
+      } catch (err) {
+        errorEl.textContent = err.message;
+        resultEl.textContent = "-";
+        statusEl.textContent = "Korrigera fälten ovan och försök igen.";
+        resetChart("Grafen visas efter en giltig beräkning.");
+      }
+    }
+
+    calculateBtn.addEventListener("click", calculate);
+    drawGrid();
+    resetChart();
+
+    // Städa bort eventuell tidigare PWA-registrering så sidan beter sig som en vanlig hemsida
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.getRegistrations()
+        .then(regs => Promise.all(regs.map(reg => reg.unregister())))
+        .catch(err => console.error("SW unregister failed", err));
+    }
+    if ("caches" in window) {
+      caches.keys()
+        .then(keys => Promise.all(keys
+          .filter(name => name.startsWith("briganti-pwa"))
+          .map(name => caches.delete(name))
+        ))
+        .catch(err => console.error("Cache cleanup failed", err));
+    }
+  </script>
+</body>
+</html>
